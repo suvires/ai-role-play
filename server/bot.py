@@ -43,6 +43,7 @@ from pipecat.processors.aggregators.llm_response import LLMUserAggregatorParams
 
 from clause_text_aggregator import FirstClauseTextAggregator
 from stt_parakeet_mlx import ParakeetSTTServiceMLX
+from stt_parakeet_onnx import ParakeetSTTServiceONNX
 from tts_mlx_isolated import TTSMLXIsolated
 from camera_vision import CameraVisionProcessor
 from emotion_tags import EmotionTagProcessor
@@ -154,6 +155,19 @@ def create_llm():
     )
 
 
+def create_stt():
+    """STT_PROVIDER in .env: "parakeet-mlx" (Apple Silicon, default on macOS) or "parakeet-onnx"
+    (CPU, default elsewhere). Same model and quality; MLX is faster."""
+    provider = os.getenv("STT_PROVIDER", "parakeet-mlx" if sys.platform == "darwin" else "parakeet-onnx")
+    if provider == "parakeet-onnx":
+        return ParakeetSTTServiceONNX(language=Language.ES)  # ~0.4s per turn
+    if provider != "parakeet-mlx":
+        raise ValueError(f'STT_PROVIDER must be "parakeet-mlx" or "parakeet-onnx", not "{provider}"')
+
+    return ParakeetSTTServiceMLX(language=Language.ES)  # ~0.15s per turn
+    # return WhisperSTTServiceMLX(model=MLXModel.LARGE_V3_TURBO_Q4, language=Language.ES)  # ~1s per turn
+
+
 def create_tts(persona: Persona):
     """TTS_PROVIDER in .env: "kokoro" (local, default) or "cartesia" (needs CARTESIA_API_KEY and
     CARTESIA_VOICE_ID). Both start speaking at the first comma of a long first sentence."""
@@ -197,8 +211,7 @@ async def run_bot(webrtc_connection, persona: Persona):
         ),
     )
 
-    stt = ParakeetSTTServiceMLX(language=Language.ES)  # ~0.15s per turn
-    # stt = WhisperSTTServiceMLX(model=MLXModel.LARGE_V3_TURBO_Q4, language=Language.ES)  # ~1s per turn
+    stt = create_stt()
 
     tts = create_tts(persona)
 

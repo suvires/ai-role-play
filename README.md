@@ -10,7 +10,7 @@ The [server/bot.py](server/bot.py) file uses these models:
 
   - Silero VAD
   - smart-turn v2
-  - Parakeet TDT 0.6B v3 (MLX) — MLX Whisper is kept as a commented-out alternative
+  - Parakeet TDT 0.6B v3 (MLX on macOS, ONNX on CPU elsewhere) — MLX Whisper is kept as a commented-out alternative
   - Gemma 4 E4B (Gemma 4 26B-A4B as a commented-out alternative)
   - Kokoro TTS
 
@@ -67,6 +67,23 @@ python bot.py
 
 ```
 HF_HUB_OFFLINE=0 uv run bot.py
+```
+
+# Run on Windows
+
+The MLX models only run on Apple Silicon. On Windows (or Linux) the bot works with the cloud LLM and TTS and transcribes locally on the CPU (Parakeet on ONNX Runtime, ~0.4s per turn, no GPU needed). In `server/.env`:
+
+```
+LLM_PROVIDER="anthropic"
+TTS_PROVIDER="cartesia"
+STT_PROVIDER="parakeet-onnx"   # the default outside macOS
+```
+
+`dev.sh` is a bash script, so start the bot and the client in two terminals:
+
+```powershell
+cd server; $env:HF_HUB_OFFLINE="0"; uv run bot.py --port 7860   # HF_HUB_OFFLINE=0 only the first time, to download the models
+cd client; npm install; npm run dev
 ```
 
 # Start the web client

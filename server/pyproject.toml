@@ -1,7 +1,7 @@
 [project]
 name = "macos-local-voice-agents-server"
 version = "0.1.0"
-description = "Local voice agents server for macOS"
+description = "Local voice agents server for macOS and Windows"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -10,18 +10,23 @@ dependencies = [
     "fastapi[all]",
     "uvicorn",
     "opencv-python",
-    "mlx-lm",
-    "mlx-audio",
-    "pipecat-ai[anthropic,cartesia,openai,deepgram,rime,silero,mlx-whisper]>=0.0.81",
+    "mlx-lm; sys_platform == 'darwin'",
+    "mlx-audio; sys_platform == 'darwin'",
+    "pipecat-ai[anthropic,cartesia,openai,deepgram,rime,silero]>=0.0.81",
+    "pipecat-ai[mlx-whisper]>=0.0.81; sys_platform == 'darwin'",
     "pipecat-ai-small-webrtc-prebuilt",
     "aiortc",
     "nltk",
-    "pyobjc-core",
-    "pyobjc-framework-Quartz",
-    "pyobjc-framework-Cocoa",
-    "pyobjc-framework-ApplicationServices",
-    "parakeet-mlx>=0.5.3",
+    "pyobjc-core; sys_platform == 'darwin'",
+    "pyobjc-framework-Quartz; sys_platform == 'darwin'",
+    "pyobjc-framework-Cocoa; sys_platform == 'darwin'",
+    "pyobjc-framework-ApplicationServices; sys_platform == 'darwin'",
+    "parakeet-mlx>=0.5.3; sys_platform == 'darwin'",
     "en-core-web-sm",
+    "onnx-asr[cpu,hub]>=0.12.0",
+    # Smart Turn v2 (end of turn detection); on macOS mlx-audio already pulls them in
+    "torch>=2.5.0,<3",
+    "transformers",
 ]
 
 [tool.uv.sources]
