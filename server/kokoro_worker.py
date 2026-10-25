@@ -13,8 +13,15 @@ Commands:
     {"cmd": "generate", "text": "Hello world"}
 """
 
+import os
 import sys
 import json
+
+# stdout is the JSON channel to the bot: keep it for our responses only and send everything
+# else libraries print (e.g. pip installing a spaCy model on first English use) to stderr
+_responses = os.fdopen(os.dup(sys.stdout.fileno()), "w", buffering=1)
+os.dup2(sys.stderr.fileno(), sys.stdout.fileno())
+sys.stdout = sys.stderr
 import base64
 import traceback
 import numpy as np
@@ -42,19 +49,24 @@ class Worker:
         try:
             self.model = load_model(model_name)
             self.voice = voice
+            # Kokoro voices are prefixed with their language code (e.g. "ef_dora" -> "e" for Spanish)
+            self.lang_code = voice[0] if voice else "a"
             # Test generation to ensure everything works
-            list(self.model.generate(text="test", voice=voice, speed=1.0))
+            list(self.model.generate(text="test", voice=voice, speed=1.0, lang_code=self.lang_code))
             return {"success": True}
         except Exception as e:
             return {"error": str(e)}
     
-    def generate(self, text):
+    def generate(self, text, voice=None):
         try:
             if not self.model:
                 return {"error": "Not initialized"}
-            
+
+            # A voice per request lets one warmed-up worker serve any character
+            voice = voice or self.voice
+            lang_code = voice[0] if voice else self.lang_code
             segments = []
-            for result in self.model.generate(text=text, voice=self.voice, speed=1.0):
+            for result in self.model.generate(text=text, voice=voice, speed=1.0, lang_code=lang_code):
                 # Convert MLX array to numpy immediately
                 audio_data = np.array(result.audio, copy=True)
                 print(f"Generated segment shape: {audio_data.shape}, min: {audio_data.min():.4f}, max: {audio_data.max():.4f}", file=sys.stderr)
@@ -95,12 +107,12 @@ def main():
             if req["cmd"] == "init":
                 resp = worker.initialize(req["model"], req["voice"])
             elif req["cmd"] == "generate":
-                resp = worker.generate(req["text"])
+                resp = worker.generate(req["text"], req.get("voice"))
             else:
                 resp = {"error": "Unknown command"}
-            print(json.dumps(resp), flush=True)
+            print(json.dumps(resp), file=_responses, flush=True)
         except Exception as e:
-            print(json.dumps({"error": str(e)}), flush=True)
+            print(json.dumps({"error": str(e)}), file=_responses, flush=True)
 
 
 if __name__ == "__main__":

@@ -9,14 +9,17 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "1.1.0",
     "@pipecat-ai/client-js": "^1.2.0",
     "@pipecat-ai/client-react": "^1.0.1",
     "@pipecat-ai/daily-transport": "^1.0.0",
     "@pipecat-ai/small-webrtc-transport": "^1.2.0",
     "@pipecat-ai/voice-ui-kit": "^0.2.0",
+    "@pixiv/three-vrm": "^3.5.5",
     "next": "15.4.3",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -24,9 +27,15 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.186.0",
     "eslint": "^9",
     "eslint-config-next": "15.4.3",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "@tailwindcss/oxide@4.1.12": true,
+    "sharp@0.34.3": true,
+    "unrs-resolver@1.11.1": true
   }
 }

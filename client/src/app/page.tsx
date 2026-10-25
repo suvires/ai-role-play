@@ -1,23 +1,10 @@
 "use client";
 
-import {
-  ConsoleTemplate,
-  FullScreenContainer,
-  ThemeProvider,
-} from "@pipecat-ai/voice-ui-kit";
+import dynamic from "next/dynamic";
+
+// The voice UI controls and three.js need the browser (document, WebGL): render client-side only
+const AvatarApp = dynamic(() => import("@/components/AvatarApp"), { ssr: false });
 
 export default function Home() {
-  return (
-    <ThemeProvider>
-      <FullScreenContainer>
-        <ConsoleTemplate
-          transportType="smallwebrtc"
-          connectParams={{
-            connectionUrl: "/api/offer",
-          }}
-          noUserVideo={true}
-        />
-      </FullScreenContainer>
-    </ThemeProvider>
-  );
+  return <AvatarApp />;
 }

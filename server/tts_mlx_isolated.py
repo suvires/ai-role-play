@@ -8,14 +8,18 @@ import subprocess
 import json
 import base64
 import sys
+import threading
 from typing import AsyncGenerator, Optional
 from pathlib import Path
 
 from loguru import logger
 
 from pipecat.frames.frames import (
+    CancelFrame,
+    EndFrame,
     ErrorFrame,
     Frame,
+    StartFrame,
     TTSAudioRawFrame,
     TTSStartedFrame,
     TTSStoppedFrame,
@@ -26,6 +30,38 @@ from pipecat.utils.tracing.service_decorators import traced_tts
 
 class TTSMLXIsolated(TTSService):
     """Completely isolated Kokoro TTS using subprocess to avoid Metal issues."""
+
+    # Initialized worker processes ready to be taken by the next connection, keyed by model
+    # (the voice is sent with every sentence, so any spare works for any voice).
+    _spares: dict = {}
+    _spares_lock = threading.Lock()
+
+    @classmethod
+    def prewarm(cls, model: str, voice: Optional[str]):
+        """Start and initialize a spare worker (blocking), so a new connection doesn't wait for model load."""
+        tts = cls(model=model, voice=voice)
+        if tts._send_command({"cmd": "init", "model": model, "voice": voice}).get("success"):
+            with cls._spares_lock:
+                cls._spares.setdefault(model, []).append(tts._process)
+            logger.info(f"Spare {model} worker ready: {tts._process.pid}")
+        else:
+            tts._cleanup()
+
+    @classmethod
+    def prewarm_in_background(cls, model: str, voice: Optional[str]):
+        threading.Thread(target=cls.prewarm, args=(model, voice), daemon=True).start()
+
+    def _take_spare(self) -> bool:
+        with self._spares_lock:
+            spares = self._spares.get(self._model_name)
+            process = spares.pop() if spares else None
+        if process is None or process.poll() is not None:
+            return False
+        self._process = process
+        logger.info(f"Using spare worker process: {process.pid}")
+        # Get the next one ready for the following connection
+        self.prewarm_in_background(self._model_name, self._voice)
+        return True
 
     def __init__(
         self,
@@ -45,6 +81,7 @@ class TTSMLXIsolated(TTSService):
 
         self._process = None
         self._initialized = False
+        self._init_lock = asyncio.Lock()
 
         # Get path to worker script
         self._worker_script = self._get_worker_script_path()
@@ -142,9 +179,30 @@ class TTSMLXIsolated(TTSService):
                     pass
             return {"error": str(e)}
 
+    async def start(self, frame: StartFrame):
+        """Warm up the worker in the background so the first utterance doesn't pay the model load."""
+        await super().start(frame)
+        self.create_task(self._initialize_if_needed())
+
+    async def stop(self, frame: EndFrame):
+        await super().stop(frame)
+        self._cleanup()
+
+    async def cancel(self, frame: CancelFrame):
+        await super().cancel(frame)
+        self._cleanup()
+
     async def _initialize_if_needed(self):
         """Initialize the worker if not already done."""
+        async with self._init_lock:
+            return await self._initialize_locked()
+
+    async def _initialize_locked(self):
         if self._initialized:
+            return True
+
+        if self._take_spare():
+            self._initialized = True
             return True
 
         loop = asyncio.get_event_loop()
@@ -190,7 +248,7 @@ class TTSMLXIsolated(TTSService):
             # Generate audio
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(
-                None, self._send_command, {"cmd": "generate", "text": text}
+                None, self._send_command, {"cmd": "generate", "text": text, "voice": self._voice}
             )
 
             if not result.get("success"):

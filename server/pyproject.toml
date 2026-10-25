@@ -12,7 +12,7 @@ dependencies = [
     "opencv-python",
     "mlx-lm",
     "mlx-audio",
-    "pipecat-ai[openai,deepgram,rime,silero,mlx-whisper]>=0.0.81",
+    "pipecat-ai[anthropic,cartesia,openai,deepgram,rime,silero,mlx-whisper]>=0.0.81",
     "pipecat-ai-small-webrtc-prebuilt",
     "aiortc",
     "nltk",
@@ -20,4 +20,9 @@ dependencies = [
     "pyobjc-framework-Quartz",
     "pyobjc-framework-Cocoa",
     "pyobjc-framework-ApplicationServices",
+    "parakeet-mlx>=0.5.3",
+    "en-core-web-sm",
 ]
+
+[tool.uv.sources]
+en-core-web-sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }

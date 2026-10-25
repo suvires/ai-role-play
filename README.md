@@ -10,8 +10,8 @@ The [server/bot.py](server/bot.py) file uses these models:
 
   - Silero VAD
   - smart-turn v2
-  - MLX Whisper
-  - Gemma3n 4B 
+  - Parakeet TDT 0.6B v3 (MLX) — MLX Whisper is kept as a commented-out alternative
+  - Gemma 4 E4B (Gemma 4 26B-A4B as a commented-out alternative)
   - Kokoro TTS
 
 But you can swap any of them out for other models, or completely reconfigure the pipeline. It's easy to add tool calling, MCP server integrations, use parallel pipelines to do async inference alongside the voice conversations, add custom processing steps, configure interrupt handling to work differently, etc.
@@ -63,10 +63,10 @@ pip install -r requirements.txt
 python bot.py
 ```
 
-After you run the first time and have all the models cached, you can set the HF_HUB_OFFLINE environment variable to prevent the Hugging Face libraries from going to the network and checking for model updates. This makes the initial bot startup and first conversation turn a lot faster.
+`bot.py` sets `HF_HUB_OFFLINE=1` by default, so the Hugging Face libraries use cached models only and don't go to the network to check for updates. This makes the initial bot startup and first conversation turn a lot faster. The first time you run the bot (or after switching to a model you haven't downloaded yet), allow downloads:
 
 ```
-HF_HUB_OFFLINE=1 uv run bot.py
+HF_HUB_OFFLINE=0 uv run bot.py
 ```
 
 # Start the web client
